@@ -11,8 +11,10 @@ from fastrtc import (
 from groq import Groq
 from loguru import logger
 
+from error_handler import patch_fastrtc_logging
 from process_groq_tts import process_groq_tts
-from simple_math_agent import agent, agent_config
+from simple_math_agent import agent as math_agent, agent_config as math_config
+from astralis_support_agent import agent as support_agent, agent_config as support_config
 
 logger.remove()
 logger.add(
@@ -47,20 +49,30 @@ def response(
     logger.info(f'👂 Transcribed: "{transcript}"')
 
     logger.debug("🧠 Running agent...")
-    agent_response = agent.invoke(
-        {"messages": [{"role": "user", "content": transcript}]}, config=agent_config
+    agent_response = support_agent.invoke(
+        {"messages": [{"role": "user", "content": transcript}]}, config=support_config
     )
     response_text = agent_response["messages"][-1].content
     logger.info(f'💬 Response: "{response_text}"')
 
     logger.debug("🔊 Generating speech...")
-    tts_response = groq_client.audio.speech.create(
-        model="playai-tts",
-        voice="Celeste-PlayAI",
-        response_format="wav",
-        input=response_text,
-    )
-    yield from process_groq_tts(tts_response)
+    try:
+        tts_response = groq_client.audio.speech.create(
+            model="playai-tts",
+            voice="Celeste-PlayAI",
+            response_format="wav",
+            input=response_text,
+        )
+        yield from process_groq_tts(tts_response)
+    except Exception as e:
+        if "rate_limit" in str(e).lower() or "429" in str(e):
+            logger.warning("⚠️ TTS rate limit reached. Returning text response only.")
+            # Return a simple beep or silence as fallback
+            fallback_audio = np.zeros(8000, dtype=np.float32)  # 1 second of silence at 8kHz
+            yield (8000, fallback_audio)
+        else:
+            logger.error(f"❌ TTS error: {e}")
+            raise
 
 
 def create_stream() -> Stream:
@@ -83,6 +95,9 @@ def create_stream() -> Stream:
 
 
 if __name__ == "__main__":
+    # Patch FastRTC logging to handle connection errors gracefully
+    patch_fastrtc_logging()
+    
     parser = argparse.ArgumentParser(description="FastRTC Groq Voice Agent")
     parser.add_argument(
         "--phone",
