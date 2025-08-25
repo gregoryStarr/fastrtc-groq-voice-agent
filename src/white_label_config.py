@@ -17,6 +17,7 @@ class ClientConfig:
     pricing_tiers: Dict[str, Dict] = None
     contact_info: Dict[str, str] = None
     custom_responses: Dict[str, str] = None
+    knowledge_base: Dict[str, str] = None  # {"type": "file|url|text", "source": "path/url/content"}
     max_tokens: int = 150
     
     def __post_init__(self):
@@ -28,6 +29,8 @@ class ClientConfig:
             self.contact_info = {}
         if self.custom_responses is None:
             self.custom_responses = {}
+        if self.knowledge_base is None:
+            self.knowledge_base = {}
 
 
 class WhiteLabelManager:
@@ -70,6 +73,7 @@ class WhiteLabelManager:
                     'pricing_tiers': client_config.pricing_tiers,
                     'contact_info': client_config.contact_info,
                     'custom_responses': client_config.custom_responses,
+                    'knowledge_base': client_config.knowledge_base,
                     'max_tokens': client_config.max_tokens,
                 }
                 json.dump(config_dict, f, indent=2)
@@ -110,6 +114,7 @@ class WhiteLabelManager:
                     'pricing_tiers': config.pricing_tiers,
                     'contact_info': config.contact_info,
                     'custom_responses': config.custom_responses,
+                    'knowledge_base': config.knowledge_base,
                     'max_tokens': config.max_tokens,
                 }
                 json.dump(config_dict, f, indent=2)

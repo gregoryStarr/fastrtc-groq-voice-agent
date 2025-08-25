@@ -1,0 +1,39 @@
+{
+  "client_id": "demo_client",
+  "company_name": "Demo Company LLC",
+  "brand_name": "Demo Solutions",
+  "voice_name": "Celeste-PlayAI",
+  "agent_persona": "friendly business consultant",
+  "services": [
+    "Business Consulting",
+    "Marketing Strategy",
+    "Process Optimization"
+  ],
+  "pricing_tiers": {
+    "Starter": {
+      "price": "$99/month",
+      "features": [
+        "Basic consulting",
+        "Email support"
+      ]
+    },
+    "Professional": {
+      "price": "$299/month",
+      "features": [
+        "Advanced consulting",
+        "Priority support",
+        "Custom reports"
+      ]
+    }
+  },
+  "contact_info": {
+    "phone": "1-800-DEMO-123",
+    "email": "contact@democompany.com",
+    "website": "democompany.com"
+  },
+  "custom_responses": {
+    "about us": "Demo Company has been helping businesses succeed for over 10 years with proven strategies and personalized support.",
+    "consulting": "Our business consulting helps you identify growth opportunities and streamline operations for maximum efficiency."
+  },
+  "max_tokens": 120
+}

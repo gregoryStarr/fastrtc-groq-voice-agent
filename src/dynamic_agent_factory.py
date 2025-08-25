@@ -5,6 +5,7 @@ from langgraph.prebuilt import create_react_agent
 from loguru import logger
 
 from white_label_config import ClientConfig, white_label_manager
+from knowledge_base import kb_loader, create_knowledge_retrieval_tool
 
 
 def create_service_info_tool(client_config: ClientConfig):
@@ -103,6 +104,14 @@ def create_custom_agent(client_id: str) -> tuple[Any, Dict[str, Any]]:
         create_company_info_tool(client_config),
     ]
     
+    # Add knowledge base tool if configured
+    if client_config.knowledge_base and client_config.knowledge_base.get('type') and client_config.knowledge_base.get('source'):
+        kb_content = kb_loader.load_knowledge_base(client_config.knowledge_base)
+        if kb_content:
+            kb_tool = create_knowledge_retrieval_tool(kb_content, client_config.brand_name)
+            tools.append(kb_tool)
+            logger.info(f"📚 Added knowledge base tool for {client_config.brand_name}")
+    
     # Create customized system prompt
     system_prompt = f"""You are {client_config.agent_persona} for {client_config.brand_name}.
 
@@ -120,7 +129,7 @@ When responding:
 - Speak naturally as this will be converted to audio
 - Always represent {client_config.brand_name} professionally
 
-Always use your available tools when customers ask about specific services, pricing, or company information."""
+Always use your available tools when customers ask about specific services, pricing, company information, or any questions that might be answered by our knowledge base."""
     
     # Create agent with custom configuration
     memory = InMemorySaver()

@@ -15,6 +15,8 @@ from error_handler import patch_fastrtc_logging
 from process_groq_tts import process_groq_tts
 from simple_math_agent import agent as math_agent, agent_config as math_config
 from astralis_support_agent import agent as support_agent, agent_config as support_config
+from dynamic_agent_factory import create_custom_agent, get_voice_settings
+from white_label_config import get_client_from_request
 
 logger.remove()
 logger.add(
@@ -24,6 +26,26 @@ logger.add(
 )
 
 groq_client = Groq()
+
+# Global variables for current client context
+current_client_id = None
+current_agent = support_agent
+current_agent_config = support_config
+
+
+def set_client_context(client_id: str):
+    """Set the current client context for the voice agent."""
+    global current_client_id, current_agent, current_agent_config
+    
+    if client_id:
+        logger.info(f"🏷️ Setting client context: {client_id}")
+        current_client_id = client_id
+        current_agent, current_agent_config = create_custom_agent(client_id)
+    else:
+        logger.info("🏷️ Using default agent")
+        current_client_id = None
+        current_agent = support_agent
+        current_agent_config = support_config
 
 
 def response(
@@ -49,18 +71,19 @@ def response(
     logger.info(f'👂 Transcribed: "{transcript}"')
 
     logger.debug("🧠 Running agent...")
-    agent_response = support_agent.invoke(
-        {"messages": [{"role": "user", "content": transcript}]}, config=support_config
+    agent_response = current_agent.invoke(
+        {"messages": [{"role": "user", "content": transcript}]}, config=current_agent_config
     )
     response_text = agent_response["messages"][-1].content
     logger.info(f'💬 Response: "{response_text}"')
 
     logger.debug("🔊 Generating speech...")
     try:
+        voice_settings = get_voice_settings(current_client_id)
         tts_response = groq_client.audio.speech.create(
-            model="playai-tts",
-            voice="Celeste-PlayAI",
-            response_format="wav",
+            model=voice_settings["model"],
+            voice=voice_settings["voice"],
+            response_format=voice_settings["response_format"],
             input=response_text,
         )
         yield from process_groq_tts(tts_response)
@@ -104,7 +127,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Launch with FastRTC phone interface (get a temp phone number)",
     )
+    parser.add_argument(
+        "--client",
+        type=str,
+        help="Client ID for white-label configuration",
+    )
     args = parser.parse_args()
+    
+    # Set client context if provided
+    if args.client:
+        set_client_context(args.client)
 
     stream = create_stream()
     logger.info("🎧 Stream handler configured")
